@@ -23,6 +23,12 @@ impl FieldOps<BaseField> for SimdBackend {
     }
 }
 
+impl FieldOps<CM31> for SimdBackend {
+    fn batch_inverse(column: &Self::Column, dst: &mut Self::Column) {
+        PackedCM31::batch_inverse(&column.data, &mut dst.data);
+    }
+}
+
 impl FieldOps<SecureField> for SimdBackend {
     fn batch_inverse(column: &SecureColumn, dst: &mut SecureColumn) {
         PackedSecureField::batch_inverse(&column.data, &mut dst.data);

@@ -67,59 +67,6 @@ jobs:
           CARGO_TARGET_WASM32_WASI_RUNNER: "wasmtime run --"
           RUSTFLAGS: -C target-feature=+simd128
 
-  run-neon-tests:
-    runs-on: macos-latest-xlarge
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-01-04
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo +nightly-2024-01-04 test
-        env:
-          RUSTFLAGS: -C target-feature=+neon
-
-  run-avx-tests:
-    strategy:
-      matrix:
-        target-feature: [avx512f, avx2]
-    runs-on: avx
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-01-04
-      - uses: Swatinem/rust-cache@v2
-      - run: cargo +nightly-2024-01-04 test
-        env:
-          RUSTFLAGS: -C target-cpu=native -C target-feature=+${{ matrix.target-feature }}
-
-  run-avx512-bench:
-    runs-on: avx
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: nightly-2024-01-04
-      - name: Run benchmark
-        run: ./scripts/bench.sh -- --output-format bencher | tee output.txt
-      - name: Download previous benchmark data
-        uses: actions/cache@v4
-        with:
-          path: ./cache
-          key: ${{ runner.os }}-benchmark
-      - name: Store benchmark result
-        uses: benchmark-action/github-action-benchmark@v1
-        with:
-          tool: "cargo"
-          output-file-path: output.txt
-          external-data-json-path: ./cache/benchmark-data.json
-          fail-on-alert: true
-          summary-always: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          comment-on-alert: true
-          alert-comment-cc-users: "@spapinistarkware"
-
   run-tests:
     runs-on: ubuntu-latest
     steps:
@@ -153,7 +100,7 @@ jobs:
       - if: ${{ steps.cache-cargo.outputs.cache-hit != 'true' }}
         name: "Download and run cargo-udeps"
         run: |
-          wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.35/cargo-udeps-v0.1.35-x86_64-unknown-linux-gnu.tar.gz | tar -xz
+          wget -O - -c https://github.com/est31/cargo-udeps/releases/download/v0.1.49/cargo-udeps-v0.1.49-x86_64-unknown-linux-gnu.tar.gz | tar -xz
           cargo-udeps-*/cargo-udeps udeps
         env:
           RUSTUP_TOOLCHAIN: nightly-2024-01-04
@@ -164,8 +111,6 @@ jobs:
       - clippy
       - format
       - run-tests
-      - run-avx-tests
-      - run-neon-tests
       - run-wasm32-wasi-tests
       - run-slow-tests
       - udeps

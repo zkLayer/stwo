@@ -21,6 +21,13 @@ pub fn commit_and_prove<B: BackendForChannel<MC>, MC: MerkleChannel>(
     trace: ColumnVec<CircleEvaluation<B, BaseField, BitReversedOrder>>,
     config: PcsConfig,
 ) -> Result<StarkProof<MC::H>, CommitAndProveError> {
+    let max_degree = trace
+        .iter()
+        .map(|x| x.domain.log_size())
+        .chain([air.composition_log_degree_bound()])
+        .max()
+        .unwrap();
+
     // Check that traces are not too big.
     for (i, trace) in trace.iter().enumerate() {
         if trace.domain.log_size() + config.fri_config.log_blowup_factor
@@ -56,7 +63,7 @@ pub fn commit_and_prove<B: BackendForChannel<MC>, MC: MerkleChannel>(
     span.exit();
 
     let (mut commitment_scheme, interaction_elements) =
-        evaluate_and_commit_on_trace(air, channel, &twiddles, trace, config)?;
+        evaluate_and_commit_on_trace(air, channel, max_degree, &twiddles, trace, config)?;
 
     let air_prover = &air.to_air_prover();
     let components = ComponentProvers(air_prover.component_provers());
@@ -80,6 +87,7 @@ pub fn commit_and_prove<B: BackendForChannel<MC>, MC: MerkleChannel>(
 pub fn evaluate_and_commit_on_trace<'a, B: BackendForChannel<MC>, MC: MerkleChannel>(
     air: &impl AirTraceGenerator<B>,
     channel: &mut MC::C,
+    max_degree: u32,
     twiddles: &'a TwiddleTree<B>,
     trace: ColumnVec<CircleEvaluation<B, BaseField, BitReversedOrder>>,
     config: PcsConfig,
@@ -88,7 +96,7 @@ pub fn evaluate_and_commit_on_trace<'a, B: BackendForChannel<MC>, MC: MerkleChan
     // TODO(spapini): Remove clone.
     let span = span!(Level::INFO, "Trace").entered();
     let mut tree_builder = commitment_scheme.tree_builder();
-    tree_builder.extend_evals(trace.clone());
+    tree_builder.extend_evals(trace.clone(), max_degree);
     tree_builder.commit(channel);
     span.exit();
 
@@ -99,7 +107,7 @@ pub fn evaluate_and_commit_on_trace<'a, B: BackendForChannel<MC>, MC: MerkleChan
     if !interaction_trace.is_empty() {
         let _span = span!(Level::INFO, "Interaction").entered();
         let mut tree_builder = commitment_scheme.tree_builder();
-        tree_builder.extend_evals(interaction_trace);
+        tree_builder.extend_evals(interaction_trace, max_degree);
         tree_builder.commit(channel);
     }
 
@@ -189,7 +197,7 @@ mod tests {
     use crate::core::poly::BitReversedOrder;
     use crate::core::prover::{ProvingError, VerificationError};
     use crate::core::test_utils::test_channel;
-    use crate::core::vcs::blake2_merkle::Blake2sMerkleChannel;
+    use crate::core::vcs::sha256_merkle::Sha256MerkleChannel;
     use crate::core::{ColumnVec, InteractionElements, LookupValues};
     use crate::qm31;
     use crate::trace_generation::prove::CommitAndProveError;
@@ -341,7 +349,7 @@ mod tests {
         let values = vec![BaseField::zero(); 1 << LOG_DOMAIN_SIZE];
         let trace = vec![CpuCircleEvaluation::new(domain, values)];
 
-        let proof_error = commit_and_prove::<_, Blake2sMerkleChannel>(
+        let proof_error = commit_and_prove::<_, Sha256MerkleChannel>(
             &air,
             &mut test_channel(),
             trace,
@@ -374,7 +382,7 @@ mod tests {
         let values = vec![BaseField::zero(); 1 << LOG_DOMAIN_SIZE];
         let trace = vec![CpuCircleEvaluation::new(domain, values)];
 
-        let proof_error = commit_and_prove::<_, Blake2sMerkleChannel>(
+        let proof_error = commit_and_prove::<_, Sha256MerkleChannel>(
             &air,
             &mut test_channel(),
             trace,
@@ -402,7 +410,7 @@ mod tests {
         let values = vec![BaseField::zero(); 1 << LOG_DOMAIN_SIZE];
         let trace = vec![CpuCircleEvaluation::new(domain, values)];
 
-        let proof = commit_and_prove::<_, Blake2sMerkleChannel>(
+        let proof = commit_and_prove::<_, Sha256MerkleChannel>(
             &air,
             &mut test_channel(),
             trace,

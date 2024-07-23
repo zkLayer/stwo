@@ -33,8 +33,8 @@ pub struct PcsConfig {
 impl Default for PcsConfig {
     fn default() -> Self {
         Self {
-            pow_bits: 5,
-            fri_config: FriConfig::new(0, 1, 3),
+            pow_bits: 20,
+            fri_config: FriConfig::new(0, 10, 8),
         }
     }
 }

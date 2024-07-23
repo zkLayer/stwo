@@ -85,7 +85,7 @@ impl Deref for Queries {
     }
 }
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct SparseSubCircleDomain {
     pub domains: Vec<SubCircleDomain>,
     pub large_domain_log_size: u32,
@@ -109,7 +109,7 @@ impl Deref for SparseSubCircleDomain {
 
 /// Represents a circle domain relative to a larger circle domain. The `initial_index` is the bit
 /// reversed query index in the larger domain.
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SubCircleDomain {
     pub coset_index: usize,
     pub log_size: u32,
@@ -132,14 +132,14 @@ impl SubCircleDomain {
 
 #[cfg(test)]
 mod tests {
-    use crate::core::channel::Blake2sChannel;
+    use crate::core::channel::sha256::Sha256Channel;
     use crate::core::poly::circle::CanonicCoset;
     use crate::core::queries::Queries;
     use crate::core::utils::bit_reverse;
 
     #[test]
     fn test_generate_queries() {
-        let channel = &mut Blake2sChannel::default();
+        let channel = &mut Sha256Channel::default();
         let log_query_size = 31;
         let n_queries = 100;
 
@@ -186,7 +186,7 @@ mod tests {
 
     #[test]
     pub fn test_conjugate_queries() {
-        let channel = &mut Blake2sChannel::default();
+        let channel = &mut Sha256Channel::default();
         let log_domain_size = 7;
         let domain = CanonicCoset::new(log_domain_size).circle_domain();
         let mut values = domain.iter().collect::<Vec<_>>();
@@ -206,7 +206,7 @@ mod tests {
 
     #[test]
     pub fn test_decommitment_positions() {
-        let channel = &mut Blake2sChannel::default();
+        let channel = &mut Sha256Channel::default();
         let log_domain_size = 31;
         let n_queries = 100;
         let fri_step_size = 3;

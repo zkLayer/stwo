@@ -207,7 +207,8 @@ mod tests {
     use num_traits::One;
 
     use crate::core::backend::CpuBackend;
-    use crate::core::channel::{Blake2sChannel, Channel};
+    use crate::core::channel::sha256::Sha256Channel;
+    use crate::core::channel::Channel;
     use crate::core::fields::qm31::SecureField;
     use crate::core::fields::Field;
     use crate::core::lookups::mle::Mle;
@@ -286,7 +287,7 @@ mod tests {
         assert!(partially_verify(claim, &invalid_proof, &mut test_channel()).is_err());
     }
 
-    fn test_channel() -> Blake2sChannel {
-        Blake2sChannel::default()
+    fn test_channel() -> Sha256Channel {
+        Sha256Channel::default()
     }
 }

@@ -467,7 +467,7 @@ mod tests {
     use num_traits::{One, Pow};
 
     use super::{CirclePointIndex, Coset};
-    use crate::core::channel::Blake2sChannel;
+    use crate::core::channel::sha256::Sha256Channel;
     use crate::core::circle::{CirclePoint, SECURE_FIELD_CIRCLE_GEN};
     use crate::core::fields::qm31::{SecureField, P4};
     use crate::core::fields::FieldExpOps;
@@ -512,7 +512,7 @@ mod tests {
 
     #[test]
     pub fn test_get_random_circle_point() {
-        let mut channel = Blake2sChannel::default();
+        let mut channel = Sha256Channel::default();
 
         let first_random_circle_point = CirclePoint::get_random_point(&mut channel);
 

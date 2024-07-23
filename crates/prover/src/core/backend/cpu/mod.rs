@@ -1,10 +1,10 @@
 mod accumulation;
-mod blake2s;
 mod circle;
 mod fri;
 mod grind;
 pub mod lookups;
 pub mod quotients;
+mod sha256;
 
 use std::fmt::Debug;
 
@@ -15,15 +15,15 @@ use crate::core::fields::Field;
 use crate::core::lookups::mle::Mle;
 use crate::core::poly::circle::{CircleEvaluation, CirclePoly};
 use crate::core::utils::bit_reverse;
-use crate::core::vcs::blake2_merkle::Blake2sMerkleChannel;
 #[cfg(not(target_arch = "wasm32"))]
 use crate::core::vcs::poseidon252_merkle::Poseidon252MerkleChannel;
+use crate::core::vcs::sha256_merkle::Sha256MerkleChannel;
 
 #[derive(Copy, Clone, Debug, Deserialize, Serialize)]
 pub struct CpuBackend;
 
 impl Backend for CpuBackend {}
-impl BackendForChannel<Blake2sMerkleChannel> for CpuBackend {}
+impl BackendForChannel<Sha256MerkleChannel> for CpuBackend {}
 #[cfg(not(target_arch = "wasm32"))]
 impl BackendForChannel<Poseidon252MerkleChannel> for CpuBackend {}
 

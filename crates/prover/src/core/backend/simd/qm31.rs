@@ -180,6 +180,14 @@ impl Add<PackedM31> for PackedQM31 {
     }
 }
 
+impl Add<PackedCM31> for PackedQM31 {
+    type Output = Self;
+
+    fn add(self, rhs: PackedCM31) -> Self::Output {
+        Self([self.a() + rhs, self.b()])
+    }
+}
+
 impl Mul<PackedM31> for PackedQM31 {
     type Output = Self;
 
@@ -202,6 +210,15 @@ impl Sub<PackedM31> for PackedQM31 {
     type Output = Self;
 
     fn sub(self, rhs: PackedM31) -> Self::Output {
+        let Self([a, b]) = self;
+        Self([a - rhs, b])
+    }
+}
+
+impl Sub<PackedCM31> for PackedQM31 {
+    type Output = Self;
+
+    fn sub(self, rhs: PackedCM31) -> Self::Output {
         let Self([a, b]) = self;
         Self([a - rhs, b])
     }

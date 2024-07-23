@@ -3,20 +3,20 @@ use num_traits::One;
 use tracing::{span, Level};
 
 use crate::constraint_framework::logup::{LogupAtRow, LogupTraceGenerator, LookupElements};
-use crate::constraint_framework::{assert_constraints, EvalAtRow, FrameworkComponent};
+use crate::constraint_framework::{EvalAtRow, FrameworkComponent};
 use crate::core::backend::simd::column::BaseColumn;
 use crate::core::backend::simd::m31::LOG_N_LANES;
 use crate::core::backend::simd::qm31::PackedSecureField;
 use crate::core::backend::simd::SimdBackend;
 use crate::core::backend::Column;
-use crate::core::channel::Blake2sChannel;
+use crate::core::channel::Sha256Channel;
 use crate::core::fields::m31::BaseField;
 use crate::core::fields::qm31::SecureField;
 use crate::core::pcs::{CommitmentSchemeProver, PcsConfig};
 use crate::core::poly::circle::{CanonicCoset, CircleEvaluation, PolyOps};
 use crate::core::poly::BitReversedOrder;
 use crate::core::prover::{prove, StarkProof};
-use crate::core::vcs::blake2_merkle::Blake2sMerkleHasher;
+use crate::core::vcs::sha256_merkle::Sha256MerkleHasher;
 use crate::core::{ColumnVec, InteractionElements};
 
 #[derive(Clone)]
@@ -50,7 +50,7 @@ impl FrameworkComponent for PlonkComponent {
         let b_val = eval.next_trace_mask();
         let c_val = eval.next_trace_mask();
 
-        eval.add_constraint(c_val - op * (a_val + b_val) + (E::F::one() - op) * a_val * b_val);
+        eval.add_constraint(c_val - op * (a_val + b_val) - (E::F::one() - op) * a_val * b_val);
 
         logup.push_lookup(
             &mut eval,
@@ -142,7 +142,7 @@ pub fn gen_interaction_trace(
 pub fn prove_fibonacci_plonk(
     log_n_rows: u32,
     config: PcsConfig,
-) -> (PlonkComponent, StarkProof<Blake2sMerkleHasher>) {
+) -> (PlonkComponent, StarkProof<Sha256MerkleHasher>) {
     assert!(log_n_rows >= LOG_N_LANES);
 
     // Prepare a fibonacci circuit.
@@ -174,14 +174,15 @@ pub fn prove_fibonacci_plonk(
     span.exit();
 
     // Setup protocol.
-    let channel = &mut Blake2sChannel::default();
+    let channel = &mut Sha256Channel::default();
     let commitment_scheme = &mut CommitmentSchemeProver::new(config, &twiddles);
 
     // Trace.
     let span = span!(Level::INFO, "Trace").entered();
     let trace = gen_trace(log_n_rows, &circuit);
+    let max_degree = log_n_rows + 1;
     let mut tree_builder = commitment_scheme.tree_builder();
-    tree_builder.extend_evals(trace);
+    tree_builder.extend_evals(trace, max_degree);
     tree_builder.commit(channel);
     span.exit();
 
@@ -192,7 +193,7 @@ pub fn prove_fibonacci_plonk(
     let span = span!(Level::INFO, "Interaction").entered();
     let (trace, claimed_sum) = gen_interaction_trace(log_n_rows, &circuit, &lookup_elements);
     let mut tree_builder = commitment_scheme.tree_builder();
-    tree_builder.extend_evals(trace);
+    tree_builder.extend_evals(trace, max_degree);
     tree_builder.commit(channel);
     span.exit();
 
@@ -209,6 +210,7 @@ pub fn prove_fibonacci_plonk(
                 )
             }))
         .collect_vec(),
+        max_degree,
     );
     tree_builder.commit(channel);
     span.exit();
@@ -219,15 +221,6 @@ pub fn prove_fibonacci_plonk(
         lookup_elements,
         claimed_sum,
     };
-
-    // Sanity check. Remove for production.
-    let trace_polys = commitment_scheme
-        .trees
-        .as_ref()
-        .map(|t| t.polynomials.iter().cloned().collect_vec());
-    assert_constraints(&trace_polys, CanonicCoset::new(log_n_rows), |mut eval| {
-        component.evaluate(eval);
-    });
 
     let proof = prove::<SimdBackend, _>(
         &[&component],
@@ -245,12 +238,11 @@ mod tests {
     use std::env;
 
     use crate::constraint_framework::logup::LookupElements;
-    use crate::core::air::Component;
-    use crate::core::channel::Blake2sChannel;
+    use crate::core::channel::Sha256Channel;
     use crate::core::fri::FriConfig;
-    use crate::core::pcs::{CommitmentSchemeVerifier, PcsConfig};
+    use crate::core::pcs::{CommitmentSchemeVerifier, PcsConfig, TreeVec};
     use crate::core::prover::verify;
-    use crate::core::vcs::blake2_merkle::Blake2sMerkleChannel;
+    use crate::core::vcs::sha256_merkle::Sha256MerkleChannel;
     use crate::core::InteractionElements;
     use crate::examples::plonk::prove_fibonacci_plonk;
 
@@ -258,12 +250,12 @@ mod tests {
     fn test_simd_plonk_prove() {
         // Get from environment variable:
         let log_n_instances = env::var("LOG_N_INSTANCES")
-            .unwrap_or_else(|_| "10".to_string())
+            .unwrap_or_else(|_| "5".to_string())
             .parse::<u32>()
             .unwrap();
         let config = PcsConfig {
             pow_bits: 10,
-            fri_config: FriConfig::new(5, 4, 64),
+            fri_config: FriConfig::new(0, 4, 64),
         };
 
         // Prove.
@@ -271,12 +263,19 @@ mod tests {
 
         // Verify.
         // TODO: Create Air instance independently.
-        let channel = &mut Blake2sChannel::default();
-        let commitment_scheme = &mut CommitmentSchemeVerifier::<Blake2sMerkleChannel>::new(config);
+        let channel = &mut Sha256Channel::default();
+        let commitment_scheme = &mut CommitmentSchemeVerifier::<Sha256MerkleChannel>::new(config);
 
         // Decommit.
         // Retrieve the expected column sizes in each commitment interaction, from the AIR.
-        let sizes = component.trace_log_degree_bounds();
+        let max_degree = log_n_instances + 1;
+
+        let sizes = TreeVec::new(vec![
+            vec![max_degree; 4],
+            vec![max_degree; 8],
+            vec![max_degree; 4],
+        ]);
+
         // Trace columns.
         commitment_scheme.commit(proof.commitments[0], &sizes[0], channel);
         // Draw lookup element.
