@@ -11,6 +11,7 @@ use crate::core::ColumnVec;
 pub struct PointEvaluator<'a> {
     pub mask: TreeVec<&'a ColumnVec<Vec<SecureField>>>,
     pub evaluation_accumulator: &'a mut PointEvaluationAccumulator,
+    pub evaluation_hint: Vec<SecureField>,
     pub col_index: Vec<usize>,
     pub denom_inverse: SecureField,
 }
@@ -24,6 +25,7 @@ impl<'a> PointEvaluator<'a> {
         Self {
             mask,
             evaluation_accumulator,
+            evaluation_hint: vec![],
             col_index,
             denom_inverse,
         }
@@ -48,8 +50,9 @@ impl<'a> EvalAtRow for PointEvaluator<'a> {
     where
         Self::EF: Mul<G, Output = Self::EF>,
     {
-        self.evaluation_accumulator
-            .accumulate(self.denom_inverse * constraint);
+        let evaluation = self.denom_inverse * constraint;
+        self.evaluation_hint.push(evaluation);
+        self.evaluation_accumulator.accumulate(evaluation);
     }
     fn combine_ef(values: [Self::F; SECURE_EXTENSION_DEGREE]) -> Self::EF {
         SecureField::from_partial_evals(values)

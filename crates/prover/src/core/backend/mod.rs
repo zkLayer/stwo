@@ -12,6 +12,7 @@ use super::pcs::quotients::QuotientOps;
 use super::poly::circle::PolyOps;
 use super::proof_of_work::GrindOps;
 use super::vcs::ops::MerkleOps;
+use crate::core::fields::cm31::CM31;
 
 pub mod cpu;
 pub mod simd;
@@ -21,6 +22,7 @@ pub trait Backend:
     + Clone
     + Debug
     + FieldOps<BaseField>
+    + FieldOps<CM31>
     + FieldOps<SecureField>
     + PolyOps
     + QuotientOps

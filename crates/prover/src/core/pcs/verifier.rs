@@ -29,8 +29,8 @@ impl<MC: MerkleChannel> CommitmentSchemeVerifier<MC> {
         }
     }
 
-    /// A [TreeVec<ColumnVec>] of the log sizes of each column in each commitment tree.
-    fn column_log_sizes(&self) -> TreeVec<ColumnVec<u32>> {
+    /// A [`TreeVec<ColumnVec>`] of the log sizes of each column in each commitment tree.
+    pub fn column_log_sizes(&self) -> TreeVec<ColumnVec<u32>> {
         self.trees
             .as_ref()
             .map(|tree| tree.column_log_sizes.clone())

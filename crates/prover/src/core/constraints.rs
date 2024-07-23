@@ -1,11 +1,12 @@
 use num_traits::One;
 
 use super::circle::{CirclePoint, Coset};
+use super::fields::cm31::CM31;
 use super::fields::m31::BaseField;
 use super::fields::qm31::SecureField;
 use super::fields::ExtensionOf;
 use super::pcs::quotients::PointSample;
-use crate::core::fields::ComplexConjugate;
+use crate::core::fields::{ComplexConjugate, FieldExpOps};
 
 /// Evaluates a vanishing polynomial of the coset at a point.
 pub fn coset_vanishing<F: ExtensionOf<BaseField>>(coset: Coset, mut p: CirclePoint<F>) -> F {
@@ -110,6 +111,30 @@ pub fn complex_conjugate_line_coeffs(
     let c = sample.point.complex_conjugate().y - sample.point.y;
     let b = sample.value * c - a * sample.point.y;
     (alpha * a, alpha * b, alpha * c)
+}
+
+/// Compute the complex_conjugate_line_coeffs but normalize c = 1
+///
+/// `complex_conjugate_line_coeffs`:
+/// Evaluates the coefficients of a line between a point and its complex conjugate. Specifically,
+/// `a, b, and c, s.t. a*x + b -c*y = 0` for (x,y) being (sample.y, sample.value) and
+/// (conj(sample.y), conj(sample.value)).
+/// Relies on the fact that every polynomial F over the base
+/// field holds: F(p*) == F(p)* (* being the complex conjugate).
+pub fn complex_conjugate_line_coeffs_normalized(sample: &PointSample) -> (CM31, CM31) {
+    assert_ne!(
+        sample.point.y,
+        sample.point.y.complex_conjugate(),
+        "Cannot evaluate a line with a single point ({:?}).",
+        sample.point
+    );
+    let a = sample.value.1;
+    let c = sample.point.y.1;
+
+    let normalized_a = a * c.inverse();
+    let normalized_b = sample.value.0 - sample.point.y.0 * normalized_a;
+
+    (normalized_a, normalized_b)
 }
 
 #[cfg(test)]

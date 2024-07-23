@@ -20,7 +20,28 @@ use crate::core::poly::circle::CircleEvaluation;
 use crate::core::poly::BitReversedOrder;
 use crate::core::vcs::verifier::MerkleVerificationError;
 
-#[derive(Debug, Serialize, Deserialize)]
+#[cfg(all(feature = "tiny_blowup", feature = "small_blowup"))]
+compile_error!(
+    "feature \"tiny_blowup\" and feature \"small_blowup\" cannot be enabled at the same time"
+);
+
+#[cfg(not(any(feature = "small_blowup", feature = "tiny_blowup")))]
+pub const LOG_BLOWUP_FACTOR: u32 = 10;
+#[cfg(feature = "small_blowup")]
+pub const LOG_BLOWUP_FACTOR: u32 = 5;
+#[cfg(feature = "tiny_blowup")]
+pub const LOG_BLOWUP_FACTOR: u32 = 2;
+
+pub const LOG_LAST_LAYER_DEGREE_BOUND: u32 = 0;
+pub const PROOF_OF_WORK_BITS: u32 = 20;
+#[cfg(not(any(feature = "small_blowup", feature = "tiny_blowup")))]
+pub const N_QUERIES: usize = 8;
+#[cfg(feature = "small_blowup")]
+pub const N_QUERIES: usize = 16;
+#[cfg(feature = "tiny_blowup")]
+pub const N_QUERIES: usize = 40;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StarkProof<H: MerkleHasher> {
     pub commitments: TreeVec<H::Hash>,
     pub lookup_values: LookupValues,
@@ -156,7 +177,7 @@ pub fn verify<MC: MerkleChannel>(
 #[allow(clippy::type_complexity)]
 /// Structures the tree-wise sampled values into component-wise OODS values and a composition
 /// polynomial OODS value.
-fn sampled_values_to_mask(
+pub fn sampled_values_to_mask(
     components: &Components<'_>,
     sampled_values: &TreeVec<ColumnVec<Vec<SecureField>>>,
 ) -> Result<(Vec<TreeVec<Vec<Vec<SecureField>>>>, SecureField), InvalidOodsSampleStructure> {

@@ -141,7 +141,7 @@ impl<'a, B: BackendForChannel<MC>, MC: MerkleChannel> CommitmentSchemeProver<'a,
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CommitmentSchemeProof<H: MerkleHasher> {
     pub sampled_values: TreeVec<ColumnVec<Vec<SecureField>>>,
     pub decommitments: TreeVec<MerkleDecommitment<H>>,
@@ -159,12 +159,16 @@ impl<'a, 'b, B: BackendForChannel<MC>, MC: MerkleChannel> TreeBuilder<'a, 'b, B,
     pub fn extend_evals(
         &mut self,
         columns: ColumnVec<CircleEvaluation<B, BaseField, BitReversedOrder>>,
+        max_degree: u32,
     ) -> TreeColumnSpan {
         let span = span!(Level::INFO, "Interpolation for commitment").entered();
         let col_start = self.polys.len();
         let polys = columns
             .into_iter()
-            .map(|eval| eval.interpolate_with_twiddles(self.commitment_scheme.twiddles))
+            .map(|eval| {
+                eval.interpolate_with_twiddles(self.commitment_scheme.twiddles)
+                    .extend(max_degree)
+            })
             .collect_vec();
         span.exit();
         self.polys.extend(polys);

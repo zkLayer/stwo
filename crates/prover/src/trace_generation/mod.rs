@@ -1,4 +1,4 @@
-mod prove;
+pub(crate) mod prove;
 pub mod registry;
 
 use downcast_rs::{impl_downcast, Downcast};

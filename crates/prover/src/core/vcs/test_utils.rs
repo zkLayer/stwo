@@ -11,6 +11,7 @@ use crate::core::backend::CpuBackend;
 use crate::core::fields::m31::BaseField;
 use crate::core::vcs::prover::MerkleProver;
 
+#[allow(dead_code)]
 pub type TestData<H> = (
     BTreeMap<u32, Vec<usize>>,
     MerkleDecommitment<H>,
@@ -18,6 +19,7 @@ pub type TestData<H> = (
     MerkleVerifier<H>,
 );
 
+#[allow(dead_code)]
 pub fn prepare_merkle<H: MerkleHasher>() -> TestData<H>
 where
     CpuBackend: MerkleOps<H>,

@@ -86,7 +86,7 @@ impl Index<&str> for InteractionElements {
     }
 }
 
-#[derive(Default, Debug, Serialize, Deserialize)]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct LookupValues(pub BTreeMap<String, BaseField>);
 
 impl LookupValues {

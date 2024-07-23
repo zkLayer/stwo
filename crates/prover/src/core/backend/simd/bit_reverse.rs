@@ -1,9 +1,10 @@
 use std::array;
 
-use super::column::{BaseColumn, SecureColumn};
+use super::column::{BaseColumn, CM31Column, SecureColumn};
 use super::m31::PackedBaseField;
 use super::SimdBackend;
 use crate::core::backend::ColumnOps;
+use crate::core::fields::cm31::CM31;
 use crate::core::fields::m31::BaseField;
 use crate::core::fields::qm31::SecureField;
 use crate::core::utils::{bit_reverse as cpu_bit_reverse, bit_reverse_index};
@@ -32,6 +33,14 @@ impl ColumnOps<SecureField> for SimdBackend {
     type Column = SecureColumn;
 
     fn bit_reverse_column(_column: &mut SecureColumn) {
+        todo!()
+    }
+}
+
+impl ColumnOps<CM31> for SimdBackend {
+    type Column = CM31Column;
+
+    fn bit_reverse_column(_column: &mut CM31Column) {
         todo!()
     }
 }
