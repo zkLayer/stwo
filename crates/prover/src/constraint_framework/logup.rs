@@ -119,7 +119,7 @@ pub struct LookupElements<const N: usize> {
 impl<const N: usize> LookupElements<N> {
     pub fn draw(channel: &mut impl Channel) -> Self {
         let [z, alpha] = channel.draw_felts(2).try_into().unwrap();
-        let mut cur = alpha;
+        let mut cur = SecureField::one();
         let alpha_powers = std::array::from_fn(|_| {
             let res = cur;
             cur *= alpha;
@@ -135,13 +135,12 @@ impl<const N: usize> LookupElements<N> {
     where
         EF: Copy + Zero + From<F> + From<SecureField> + Mul<F, Output = EF> + Sub<EF, Output = EF>,
     {
-        EF::from(values[0])
-            + values[1..]
-                .iter()
-                .zip(self.alpha_powers.iter())
-                .fold(EF::zero(), |acc, (&value, &power)| {
-                    acc + EF::from(power) * value
-                })
+        values
+            .iter()
+            .zip(self.alpha_powers.iter())
+            .fold(EF::zero(), |acc, (&value, &power)| {
+                acc + EF::from(power) * value
+            })
             - EF::from(self.z)
     }
     // TODO(spapini): Try to remove this.
