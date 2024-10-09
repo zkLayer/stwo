@@ -135,13 +135,12 @@ impl<const N: usize> LookupElements<N> {
     where
         EF: Copy + Zero + From<F> + From<SecureField> + Mul<F, Output = EF> + Sub<EF, Output = EF>,
     {
-        EF::from(values[0])
-            + values[1..]
-                .iter()
-                .zip(self.alpha_powers.iter())
-                .fold(EF::zero(), |acc, (&value, &power)| {
-                    acc + EF::from(power) * value
-                })
+        values
+            .iter()
+            .zip(self.alpha_powers.iter())
+            .fold(EF::zero(), |acc, (&value, &power)| {
+                acc + EF::from(power) * value
+            })
             - EF::from(self.z)
     }
     // TODO(spapini): Try to remove this.
